@@ -1,85 +1,78 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, accuracy_score
 
-# Sigmoid activation function and its derivative
-def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
+class Perceptron:
+    def __init__(self, input_size, learning_rate=0.1, epochs=1000):
+        self.weights = np.random.randn(input_size + 1)  # +1 for bias
+        self.learning_rate = learning_rate
+        self.epochs = epochs
 
-def sigmoid_derivative(x):
-    return x * (1 - x)
+    def activation(self, x):
+        return 1 if x >= 0 else 0
 
-# Input data for XOR function
-X = np.array([[0, 0],
-              [0, 1],
-              [1, 0],
-              [1, 1]])
+    def train(self, X, y):
+        X = np.c_[np.ones((X.shape[0], 1)), X]  # Add bias column
+        for epoch in range(self.epochs):
+            for i in range(X.shape[0]):
+                y_pred = self.activation(np.dot(self.weights, X[i]))
+                self.weights += self.learning_rate * (y[i] - y_pred) * X[i]
 
-# Expected output
-Y = np.array([[0],
-              [1],
-              [1],
-              [0]])
+    def predict(self, X, y):
+        y_pred = []
+        for x in X:
+            x_with_bias = np.insert(x, 0, 1)  # Add bias term
+            prediction = self.activation(np.dot(self.weights, x_with_bias))
+            y_pred.append(prediction)
+        return y_pred
+# Define functions dynamically
+Hidden_ly_output = [
+    np.array([0, 0, 0, 1]),
+    np.array([0, 0, 1, 0]),
+    np.array([0, 1, 0, 0]),
+    np.array([1, 0, 0, 0])
+]
 
-# Set seed for reproducibility
-np.random.seed(42)
+X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+predictions = []
 
-# Initialize weights and biases
-input_neurons = 2
-hidden_neurons = 4
-output_neurons = 1
+# Train perceptrons for each function dynamically i.e 4 neurons for 4 different inputs
+for y in Hidden_ly_output:
+    perceptron = Perceptron(input_size=2,epochs=15)
+    perceptron.train(X, y)
+    y_pred = perceptron.predict(X, y)
+    predictions.append(y_pred)
 
-# Random weights and biases
-W1 = np.random.uniform(-1, 1, (input_neurons, hidden_neurons))
-b1 = np.random.uniform(-1, 1, (1, hidden_neurons))
-W2 = np.random.uniform(-1, 1, (hidden_neurons, output_neurons))
-b2 = np.random.uniform(-1, 1, (1, output_neurons))
+# Convert predictions into input for final perceptron
+final_X = np.array(predictions)
 
-# Learning rate
-learning_rate = 0.5
+final_y = np.array([0, 1, 1, 0]) # XOR output
 
-# Training iterations
-epochs = 10000
-errors = []
+# Train final perceptron
+final_perceptron = Perceptron(input_size=len(final_X),epochs=15)
+final_perceptron.train(final_X, final_y)
+final_predictions = final_perceptron.predict(final_X, final_y)
 
-for epoch in range(epochs):
-    # Forward pass
-    hidden_input = np.dot(X, W1) + b1
-    hidden_output = sigmoid(hidden_input)
-    final_input = np.dot(hidden_output, W2) + b2
-    final_output = sigmoid(final_input)
-    
-    # Compute error
-    error = Y - final_output
-    errors.append(np.mean(np.abs(error)))
-    
-    # Backpropagation
-    d_output = error * sigmoid_derivative(final_output)
-    d_hidden = d_output.dot(W2.T) * sigmoid_derivative(hidden_output)
-    
-    # Update weights and biases
-    W2 += hidden_output.T.dot(d_output) * learning_rate
-    b2 += np.sum(d_output, axis=0, keepdims=True) * learning_rate
-    W1 += X.T.dot(d_hidden) * learning_rate
-    b1 += np.sum(d_hidden, axis=0, keepdims=True) * learning_rate
-    
-    # Print error every 1000 epochs
-    if epoch % 1000 == 0:
-        print(f'Epoch {epoch}, Error: {np.mean(np.abs(error))}')
+# Display XOR truth table with predictions
+print("\nXOR Truth Table Predictions:")
+print(" X1  X2 |  y_actual  y_pred")
+print("---------------------------")
+for i in range(len(X)):
+    print(f" {X[i][0]}   {X[i][1]}  |     {final_y[i]}        {final_predictions[i]}")
 
-# Testing the trained model
-final_output = np.round(final_output)
-print("\nFinal Outputs:")
-print(final_output)
 
-# Compute and print confusion matrix
-cm = confusion_matrix(Y, final_output)
-print("\nConfusion Matrix:")
-print(cm)
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, accuracy_score
 
-# Plot loss curve
-plt.plot(errors)
-plt.xlabel('Epochs')
-plt.ylabel('Error')
-plt.title('Loss Curve')
+
+accuracy = accuracy_score(final_y, final_predictions)
+print(f"Final Perceptron Accuracy: {accuracy * 100:.2f}%")
+print()
+
+cm = confusion_matrix(final_y, final_predictions)
+ConfusionMatrixDisplay(cm).plot()
+plt.title("Confusion Matrix for XOR using MLP")
 plt.show()
+print()
+
+
